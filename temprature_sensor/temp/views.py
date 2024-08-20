@@ -14,9 +14,9 @@ from .models import SensorData
 
 def index(request):
     sensor_data = SensorData.objects.all()
-    context = {'sensor_data': sensor_data}
-    return render(request, 'index.html', context)
-
+    serializer = SensorDataSerializer(sensor_data, many=True)
+    sensor_data_json = json.dumps(serializer.data)
+    return render(request, 'temp/index.html', {'sensor_data_json': sensor_data_json})
 
 class SensorDataList(APIView):
     def get(self, request, *args, **kwargs):
