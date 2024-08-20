@@ -9,17 +9,14 @@ from django.utils import timezone
 from django.db.models import Avg
 import json
 
+from django.shortcuts import render
+from .models import SensorData
+
 def index(request):
     sensor_data = SensorData.objects.all()
-    serializer = SensorDataSerializer(sensor_data, many=True)
+    context = {'sensor_data': sensor_data}
+    return render(request, 'index.html', context)
 
-    # Convert the serialized data to JSON string
-    sensor_data_json = json.dumps(serializer.data)
-
-    context = {
-        'sensor_data': sensor_data_json
-    }
-    return render(request, 'temp/index.html', context)
 
 class SensorDataList(APIView):
     def get(self, request, *args, **kwargs):
