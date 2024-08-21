@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sensor Data Visualization</title>
+    <title>Real-Time Sensor Data</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -12,7 +12,7 @@
             background-color: #f4f4f4;
         }
         header {
-            background-color: #333;
+            background-color: yellowgreen;
             color: #fff;
             padding: 10px 20px;
             text-align: center;
@@ -31,38 +31,56 @@
         }
         h2 {
             text-align: center;
+            margin-bottom: 20px;
         }
-        svg {
-            display: block;
-            margin: 20px auto;
-            font: 10px sans-serif;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
         }
-        .axis path,
-        .axis line {
-            fill: none;
-            stroke: #000;
-            shape-rendering: crispEdges;
+        table, th, td {
+            border: 1px solid yellowgreen;
         }
-        .line {
-            fill: none;
-            stroke-width: 2px;
+        th, td {
+            padding: 8px 12px;
+            text-align: center;
+        }
+        th {
+            background-color: yellowgreen;
+            color: #fff;
+        }
+        footer {
+            text-align: center;
+            padding: 10px;
+            background-color: yellowgreen;
+            color: #fff;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
         }
     </style>
-    <script src="https://d3js.org/d3.v7.min.js"></script>
 </head>
 <body>
     <header>
-        <h1>Sensor Data Visualization</h1>
+        <h1>Real-Time Sensor Data</h1>
         <nav>
-            <a href="{% url 'average_sensor_data' %}">View Average Sensor Data</a>
+            <a href="{% url 'charts_view' %}">Go to Charts</a>
         </nav>
     </header>
     <main>
-        <h2>Temperature Over Time (Line Chart)</h2>
-        <div id="line-chart-temperature"></div>
-
-        <h2>Humidity Over Time (Line Chart)</h2>
-        <div id="line-chart-humidity"></div>
+        <h2>Latest Sensor Data</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Timestamp</th>
+                    <th>Temperature (°C)</th>
+                    <th>Humidity (%)</th>
+                </tr>
+            </thead>
+            <tbody id="sensor-data-table">
+                <!-- Table rows will be inserted here by JavaScript -->
+            </tbody>
+        </table>
     </main>
     <footer>
         <p>&copy; 2024 Sensor Data API</p>
@@ -70,89 +88,36 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Parse JSON data passed from Django
-            const sensorData = JSON.parse('{{ sensor_data_json|escapejs }}');
+            // Function to refresh the data every 6 seconds
+            function refreshData() {
+                const sensorData = JSON.parse('{{ sensor_data_json|escapejs }}');
+                
+                const tableBody = document.getElementById('sensor-data-table');
+                tableBody.innerHTML = ''; // Clear existing rows
 
-            // Set up dimensions
-            const margin = {top: 20, right: 30, bottom: 30, left: 40},
-                  width = 800 - margin.left - margin.right,
-                  height = 400 - margin.top - margin.bottom;
+                // Populate table with new data
+                sensorData.forEach(data => {
+                    const row = document.createElement('tr');
+                    const timestampCell = document.createElement('td');
+                    const temperatureCell = document.createElement('td');
+                    const humidityCell = document.createElement('td');
 
-            // Convert timestamp to Date object
-            sensorData.forEach(d => {
-                d.timestamp = new Date(d.timestamp);
-            });
+                    timestampCell.textContent = new Date(data.timestamp).toLocaleString();
+                    temperatureCell.textContent = `${data.temperature.toFixed(2)} °C`;
+                    humidityCell.textContent = `${data.humidity.toFixed(2)} %`;
 
-            // Line Chart for Temperature
-            const xScaleLine = d3.scaleTime()
-                .domain(d3.extent(sensorData, d => d.timestamp))
-                .range([0, width]);
+                    row.appendChild(timestampCell);
+                    row.appendChild(temperatureCell);
+                    row.appendChild(humidityCell);
+                    tableBody.appendChild(row);
+                });
+            }
 
-            const yScaleLineTemperature = d3.scaleLinear()
-                .domain([0, d3.max(sensorData, d => d.temperature)])
-                .range([height, 0]);
+            // Initial load
+            refreshData();
 
-            const lineTemperature = d3.line()
-                .x(d => xScaleLine(d.timestamp))
-                .y(d => yScaleLineTemperature(d.temperature));
-
-            const svgLineTemperature = d3.select("#line-chart-temperature")
-                .append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            svgLineTemperature.append("path")
-                .datum(sensorData)
-                .attr("class", "line")
-                .attr("d", lineTemperature)
-                .style("stroke", "steelblue");
-
-            svgLineTemperature.append("g")
-                .attr("class", "x axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(xScaleLine));
-
-            svgLineTemperature.append("g")
-                .attr("class", "y axis")
-                .call(d3.axisLeft(yScaleLineTemperature));
-
-            // Line Chart for Humidity
-            const yScaleLineHumidity = d3.scaleLinear()
-                .domain([0, d3.max(sensorData, d => d.humidity)])
-                .range([height, 0]);
-
-            const lineHumidity = d3.line()
-                .x(d => xScaleLine(d.timestamp))
-                .y(d => yScaleLineHumidity(d.humidity));
-
-            const svgLineHumidity = d3.select("#line-chart-humidity")
-                .append("svg")
-                .attr("width", width + margin.left + margin.right)
-                .attr("height", height + margin.top + margin.bottom)
-                .append("g")
-                .attr("transform", `translate(${margin.left},${margin.top})`);
-
-            svgLineHumidity.append("path")
-                .datum(sensorData)
-                .attr("class", "line")
-                .attr("d", lineHumidity)
-                .style("stroke", "orange");
-
-            svgLineHumidity.append("g")
-                .attr("class", "x axis")
-                .attr("transform", `translate(0,${height})`)
-                .call(d3.axisBottom(xScaleLine).tickFormat(d3.timeFormat("%H:%M:%S")));
-
-            svgLineHumidity.append("g")
-                .attr("class", "y axis")
-                .call(d3.axisLeft(yScaleLineHumidity));
-
-            // Refresh the page every 6 seconds
-            setTimeout(() => {
-                window.location.reload();
-            }, 6000);
+            // Refresh every 6 seconds
+            setInterval(refreshData, 6000);
         });
     </script>
 </body>
